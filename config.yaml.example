@@ -1,0 +1,12 @@
+api_id: 12345678
+api_hash: "your_api_hash_here"
+phone: "+1234567890"
+chat_id: 987654321
+photos_dir: "./photos"
+sent_log: "./sent_photos.json"
+schedule:
+  start_hour: 8
+  start_minute: 10
+  end_hour: 8
+  end_minute: 20
+photos_per_day: 3

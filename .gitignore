@@ -1,0 +1,10 @@
+# Telegram Photo Scheduler
+venv/
+__pycache__/
+*.pyc
+config.yaml
+telegram_session.session
+sent_photos.json
+photos/
+logs/
+.pytest_cache/
