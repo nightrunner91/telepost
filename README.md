@@ -1,117 +1,131 @@
-# Telegram Photo Scheduler
+# Telepost
 
-Автоматическая отправка фотографий другу в Telegram от вашего имени по расписанию.
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![Tests](https://img.shields.io/badge/tests-pytest-green.svg)](https://pytest.org/)
+[![Docker](https://img.shields.io/badge/docker-ready-blue.svg)](https://www.docker.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-## Возможности
+> Lightweight Telegram userbot for scheduling photo posts to a chat.
 
-- Отправка 3 фото в день в случайное время в заданном окне (по умолчанию 7:00-8:00)
-- Фото выбираются по дате модификации (от старых к новым)
-- Отправка от вашего аккаунта (userbot) — друг не видит "bot"
-- Трекинг отправленных фото (не дублируются)
-- Настраиваемое временное окно
+Telepost sends photos from a local folder to a Telegram chat on your behalf, at configurable daily times. It tracks already-sent photos, picks the oldest ones first, and randomizes send times within a window so the activity looks natural.
 
-## Установка
+## Features
+
+- 📤 Sends photos from your personal Telegram account (userbot)
+- ⏰ Configurable daily sending window and photo count
+- 🎲 Randomized send times inside the window
+- 🗂️ Tracks sent photos so nothing is duplicated
+- 📁 Automatically moves sent photos to a `sent/` folder
+- 🐳 Ready-to-use Docker setup
+- 🧪 Covered with pytest
+
+## Disclaimer
+
+Automating a personal Telegram account may violate Telegram's Terms of Service. Use at your own risk. Do not use this tool for spam or unsolicited messaging.
+
+## Requirements
+
+- Python 3.11+
+- A Telegram account
+- `api_id` and `api_hash` from [my.telegram.org/apps](https://my.telegram.org/apps)
+
+## Quick start
 
 ```bash
-# Клонировать репозиторий
-git clone <repo-url>
-cd telegram-photo-scheduler
+# 1. Clone the repository
+git clone https://github.com/yourusername/telepost.git
+cd telepost
 
-# Создать виртуальное окружение
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-# или
-venv\Scripts\activate  # Windows
-
-# Установить зависимости
+# 2. Install dependencies
 pip install -r requirements.txt
-```
 
-## Настройка
+# 3. Copy and fill the configuration
+cp config.yaml.example config.yaml
+# edit config.yaml with your api_id, api_hash, phone and chat_id
 
-1. Получите `api_id` и `api_hash` на https://my.telegram.org/apps
-2. Скопируйте `config.yaml.example` в `config.yaml`
-3. Заполните конфигурацию:
-
-```yaml
-api_id: 12345678          # Ваш api_id
-api_hash: "your_hash"     # Ваш api_hash
-phone: "+1234567890"      # Ваш номер телефона
-chat_id: 987654321        # ID друга или чата
-photos_dir: "./photos"    # Папка с фотографиями
-sent_log: "./sent_photos.json"
-schedule:
-  start_hour: 7           # Начало окна отправки
-  start_minute: 0
-  end_hour: 8             # Конец окна отправки
-  end_minute: 0
-photos_per_day: 3         # Количество фото в день
-```
-
-**Как узнать chat_id:**
-- Перешлите сообщение от друга в @userinfobot
-- Или используйте `python -c "from telethon import TelegramClient; import asyncio; asyncio.run(TelegramClient('session', api_id, api_hash).start(phone=phone).then(lambda c: print(c)))"`
-
-## Использование
-
-### 1. Авторизация (первый запуск)
-
-```bash
+# 4. Authenticate (one-time)
 python auth.py
-```
 
-Скрипт запросит код из Telegram. После успешной авторизации создастся файл `telegram_session.session`.
-
-### 2. Запуск бота
-
-```bash
+# 5. Run the scheduler
 python main.py
 ```
 
-Бот будет работать в фоне, проверяя временное окно каждые 5 минут.
+## Configuration
 
-### 3. Остановка
+Copy `config.yaml.example` to `config.yaml` and adjust the values:
 
-Нажмите `Ctrl+C` для корректной остановки.
-
-## Как это работает
-
-1. Бот проверяет текущее время каждые 5 минут
-2. Если сейчас в окне отправки и сегодня ещё не отправляли:
-   - Берёт 3 следующих фото из `photos_dir` (по дате модификации)
-   - Генерирует 3 случайных времени в окне
-   - Отправляет фото с задержками
-3. Отправленные фото записываются в `sent_photos.json`
-4. Если фото закончились — бот останавливается с логом
-
-## Структура проекта
-
-```
-telegram-photo-scheduler/
-├── main.py              # Точка входа, планировщик
-├── auth.py              # Авторизация userbot
-├── config.py            # Загрузка конфигурации
-├── tracker.py           # Трекинг отправленных фото
-├── sender.py            # Логика выбора фото и генерации времён
-├── config.yaml          # Конфигурация (создайте из example)
-├── requirements.txt     # Зависимости
-├── photos/              # Папка с фотографиями
-└── sent_photos.json     # История отправленных (создаётся автоматически)
+```yaml
+api_id: 12345678
+api_hash: "your_api_hash_here"
+phone: "+1234567890"
+chat_id: 987654321              # target chat/user id
+photos_dir: "./photos/incoming" # source folder
+sent_dir: "./photos/sent"       # folder for already-sent photos
+sent_log: "./data/sent_photos.json"
+schedule:
+  start_hour: 8
+  start_minute: 10
+  end_hour: 8
+  end_minute: 20
+photos_per_day: 3
 ```
 
-## Тестирование
+**How to get `chat_id`:** forward a message from the target chat to [@userinfobot](https://t.me/userinfobot).
+
+## How it works
+
+1. The scheduler wakes up every few minutes and checks whether today's photos have been sent.
+2. If the current time is inside the configured window, it picks the next `photos_per_day` oldest images from `photos_dir` that have not been sent yet.
+3. It generates random send times inside the window, waits, and sends the photos.
+4. Each successfully sent photo is recorded in `sent_log` and moved to `sent_dir`.
+5. When there are no more photos, the scheduler logs a message and stops.
+
+## Docker
+
+```bash
+# 1. Copy and fill configuration
+cp config.yaml.example config.yaml
+# edit config.yaml
+
+# 2. Optional: create .env for an auth code
+cp .env.example .env
+
+# 3. Authenticate (interactive)
+docker-compose run --rm telepost python auth.py
+
+# 4. Run the scheduler
+docker-compose up -d
+```
+
+Your Telegram session is persisted in `data/telegram_session.session`, so you only need to authenticate once.
+
+## Testing
 
 ```bash
 pytest tests/ -v
 ```
 
-## Предупреждения
+## Project structure
 
-- **Используйте на свой риск:** Автоматизация аккаунта может нарушать ToS Telegram
-- **Не спамьте:** 3 фото в день — безопасный лимит
-- **Активность аккаунта:** Продолжайте использовать аккаунт вручную, чтобы не выглядеть как бот
-- **Session файл:** Не передавайте `telegram_session.session` другим — это доступ к вашему аккаунту
+```
+telepost/
+├── main.py              # scheduler entry point
+├── auth.py              # one-time authentication
+├── sender.py            # photo selection & time generation
+├── tracker.py           # sent-photo tracking
+├── config.py            # configuration loader
+├── config.yaml.example  # configuration template
+├── docker-compose.yml
+├── Dockerfile
+├── requirements.txt
+├── photos/              # put photos in photos/incoming
+│   ├── incoming/
+│   └── sent/
+└── data/                # created at runtime
+    ├── telegram_session.session
+    └── sent_photos.json
+```
 
-## Лицензия
+## License
 
-MIT
+[MIT](LICENSE)
