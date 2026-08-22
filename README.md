@@ -33,7 +33,7 @@ Automating a personal Telegram account may violate Telegram's Terms of Service. 
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/yourusername/telepost.git
+git clone https://github.com/nightrunner91/telepost.git
 cd telepost
 
 # 2. Install dependencies
@@ -97,7 +97,7 @@ docker-compose run --rm telepost python auth.py
 docker-compose up -d
 ```
 
-Your Telegram session is persisted in `data/telegram_session.session`, so you only need to authenticate once.
+Your Telegram session and sent-photo log are persisted in a Docker volume (`telepost_data`), so you only need to authenticate once. Photos are still managed from the `photos/` folder on your host.
 
 ## Testing
 
@@ -121,7 +121,7 @@ telepost/
 ├── photos/              # put photos in photos/incoming
 │   ├── incoming/
 │   └── sent/
-└── data/                # created at runtime
+└── data/                # created at runtime (Docker uses a named volume)
     ├── telegram_session.session
     └── sent_photos.json
 ```

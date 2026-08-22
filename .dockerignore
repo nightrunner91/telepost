@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.venv/
+venv/
+
+# Git
+.git/
+.gitignore
+
+# Secrets & runtime data
+config.yaml
+.env
+.env.example
+data/
+telegram_session.session
+*.session
+photos/incoming/*
+!photos/incoming/.gitkeep
+!photos/incoming/README.md
+photos/sent/*
+!photos/sent/.gitkeep
+!photos/sent/README.md
+
+# Docker meta (not needed in runtime image)
+.dockerignore
+Dockerfile
+docker-compose.yml
+
+# Dev scripts
+test_send.py
+
+# Tests & docs (not needed in runtime image)
+tests/
+README.md
+LICENSE

@@ -2,12 +2,15 @@ services:
   telepost:
     build: .
     container_name: telepost
-    restart: unless-stopped
+    restart: on-failure
     environment:
       - TZ=Europe/Chisinau
     volumes:
       - ./photos:/app/photos
-      - ./data:/app/data
       - ./config.yaml:/app/config.yaml
+      - telepost_data:/app/data
     env_file:
       - .env
+
+volumes:
+  telepost_data:
