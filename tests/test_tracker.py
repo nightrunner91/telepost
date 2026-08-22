@@ -62,5 +62,5 @@ def test_get_pending_photos_excludes_sent(tracker, tmp_path):
     tracker.mark_sent(str(photo1))
     
     pending = tracker.get_pending_photos(str(tmp_path), count=5)
-    assert str(photo1) not in pending
-    assert str(photo2) in pending
+    assert photo1.as_posix() not in pending
+    assert photo2.as_posix() in pending

@@ -1,13 +1,13 @@
-version: '3.8'
-
 services:
-  telegram-bot:
+  telepost:
     build: .
-    container_name: telegram-photo-scheduler
+    container_name: telepost
     restart: unless-stopped
+    environment:
+      - TZ=Europe/Chisinau
     volumes:
       - ./photos:/app/photos
-      - ./sent_photos.json:/app/sent_photos.json
-      - ./telegram_session.session:/app/telegram_session.session
+      - ./data:/app/data
+      - ./config.yaml:/app/config.yaml
     env_file:
       - .env

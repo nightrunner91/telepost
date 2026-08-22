@@ -2,8 +2,9 @@ api_id: 12345678
 api_hash: "your_api_hash_here"
 phone: "+1234567890"
 chat_id: 987654321
-photos_dir: "./photos"
-sent_log: "./sent_photos.json"
+photos_dir: "./photos/incoming"
+sent_dir: "./photos/sent"
+sent_log: "./data/sent_photos.json"
 schedule:
   start_hour: 8
   start_minute: 10

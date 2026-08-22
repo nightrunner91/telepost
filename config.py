@@ -1,22 +1,28 @@
 import yaml
-import sys
 from pathlib import Path
 
 
-def load_config(path: str = "config.yaml") -> dict:
+class ConfigError(Exception):
+    """Raised when the configuration is missing or invalid."""
+
+
+def load_config(path: str | Path = "config.yaml") -> dict:
     config_path = Path(path)
     if not config_path.exists():
-        print(f"Ошибка: {path} не найден. Скопируйте config.yaml.example в config.yaml и заполните.")
-        sys.exit(1)
+        raise ConfigError(
+            f"{path} not found. Copy config.yaml.example to config.yaml and fill it in."
+        )
 
     with open(config_path, "r", encoding="utf-8") as f:
-        config = yaml.safe_load(f)
+        config = yaml.safe_load(f) or {}
 
-    required = ["api_id", "api_hash", "chat_id", "photos_dir"]
+    required = ["api_id", "api_hash", "phone", "chat_id", "photos_dir"]
     missing = [k for k in required if k not in config or config[k] is None]
     if missing:
-        print(f"Ошибка: отсутствуют обязательные поля: {', '.join(missing)}")
-        sys.exit(1)
+        raise ConfigError(f"Missing required config fields: {', '.join(missing)}")
+
+    if not isinstance(config["chat_id"], int):
+        raise ConfigError("chat_id must be an integer")
 
     schedule = config.get("schedule", {})
     config["schedule"] = {
@@ -26,6 +32,7 @@ def load_config(path: str = "config.yaml") -> dict:
         "end_minute": schedule.get("end_minute", 0),
     }
     config["photos_per_day"] = config.get("photos_per_day", 3)
-    config["sent_log"] = config.get("sent_log", "./sent_photos.json")
+    config["sent_log"] = config.get("sent_log", "./data/sent_photos.json")
+    config["sent_dir"] = config.get("sent_dir", "./photos/sent")
 
     return config

@@ -1,10 +1,12 @@
 import json
-from datetime import datetime, date
+from datetime import date, datetime
 from pathlib import Path
+
+from sender import choose_photos
 
 
 class PhotoTracker:
-    def __init__(self, log_file: str):
+    def __init__(self, log_file: str | Path):
         self.log_file = Path(log_file)
         self.data = self._load()
 
@@ -14,43 +16,33 @@ class PhotoTracker:
         with open(self.log_file, "r", encoding="utf-8") as f:
             return json.load(f)
 
-    def _save(self):
+    def _save(self) -> None:
+        self.log_file.parent.mkdir(parents=True, exist_ok=True)
         with open(self.log_file, "w", encoding="utf-8") as f:
             json.dump(self.data, f, indent=2, ensure_ascii=False)
 
-    def get_sent_photos(self) -> list:
-        return [entry["path"] for entry in self.data["sent"]]
+    def get_sent_photos(self) -> list[str]:
+        return [Path(entry["path"]).as_posix() for entry in self.data["sent"]]
 
-    def mark_sent(self, path: str, date_str: str = None):
+    def get_sent_set(self) -> set[str]:
+        return set(self.get_sent_photos())
+
+    def mark_sent(self, path: str | Path, date_str: str | None = None) -> None:
         if date_str is None:
             date_str = date.today().isoformat()
         self.data["sent"].append({
-            "path": path,
+            "path": Path(path).as_posix(),
             "date": date_str,
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
         })
         self._save()
 
-    def is_sent(self, path: str) -> bool:
-        return path in self.get_sent_photos()
+    def is_sent(self, path: str | Path) -> bool:
+        return Path(path).as_posix() in self.get_sent_set()
 
     def get_today_count(self) -> int:
         today = date.today().isoformat()
         return sum(1 for entry in self.data["sent"] if entry["date"] == today)
 
-    def get_pending_photos(self, photos_dir: str, count: int) -> list:
-        dir_path = Path(photos_dir)
-        if not dir_path.exists():
-            return []
-
-        sent_set = set(self.get_sent_photos())
-        all_photos = []
-
-        for file_path in dir_path.iterdir():
-            if file_path.is_file() and file_path.suffix.lower() in {".jpg", ".jpeg", ".png"}:
-                if str(file_path) not in sent_set:
-                    mtime = file_path.stat().st_mtime
-                    all_photos.append((str(file_path), mtime))
-
-        all_photos.sort(key=lambda x: x[1])
-        return [p[0] for p in all_photos[:count]]
+    def get_pending_photos(self, photos_dir: str | Path, count: int) -> list[str]:
+        return [p.as_posix() for p in choose_photos(photos_dir, self.get_sent_set(), count)]

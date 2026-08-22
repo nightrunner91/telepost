@@ -1,10 +1,37 @@
-# Telegram Photo Scheduler
+# Python
 venv/
+.venv/
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.Python
+build/
+dist/
+*.egg-info/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Project secrets & runtime data
 config.yaml
-telegram_session.session
-sent_photos.json
-photos/
+.env
+data/
+photos/incoming/*
+!photos/incoming/.gitkeep
+!photos/incoming/README.md
+photos/sent/*
+!photos/sent/.gitkeep
+!photos/sent/README.md
+
+# Logs
 logs/
+*.log
+
+# Testing
 .pytest_cache/
+.coverage
