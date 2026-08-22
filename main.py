@@ -74,10 +74,16 @@ async def main_loop() -> None:
     )
 
     telegram_code = os.environ.get("TELEGRAM_CODE")
-    if telegram_code:
+    await client.connect()
+    if not await client.is_user_authorized():
+        if not telegram_code:
+            logger.error(
+                "Telegram session is not authorized and TELEGRAM_CODE is not set. "
+                "Authenticate first with: docker compose run --rm telepost python auth.py"
+            )
+            await client.disconnect()
+            return
         await client.start(phone=config["phone"], code_callback=lambda: telegram_code)
-    else:
-        await client.start(phone=config["phone"])
     logger.info("Scheduler started")
 
     try:
