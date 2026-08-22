@@ -98,14 +98,13 @@ async def main_loop() -> None:
             in_window = start_time <= current_time <= end_time
 
             if today_count < config["photos_per_day"]:
-                if in_window or today_count == 0:
-                    if in_window:
-                        logger.info("Inside sending window")
-                    else:
-                        logger.warning("Outside sending window but no photos sent today — sending now")
+                if in_window:
+                    logger.info("Inside sending window")
                     result = await schedule_today(client, config, tracker)
                     if result is False:
                         break
+                else:
+                    logger.info("Outside sending window, waiting")
 
             await asyncio.sleep(300)
 
