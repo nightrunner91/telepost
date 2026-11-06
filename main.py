@@ -16,44 +16,79 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+WINDOW_BEFORE = "before"
+WINDOW_INSIDE = "inside"
+WINDOW_AFTER = "after"
 
-async def schedule_today(client: TelegramClient, config: dict, tracker: PhotoTracker) -> bool:
+
+def window_state(now: datetime, schedule: dict) -> str:
+    """Return where `now` is relative to today's sending window."""
+    start = time(schedule["start_hour"], schedule["start_minute"])
+    end = time(schedule["end_hour"], schedule["end_minute"])
+    current = now.time()
+
+    if current < start:
+        return WINDOW_BEFORE
+    if current > end:
+        return WINDOW_AFTER
+    return WINDOW_INSIDE
+
+
+async def schedule_today(
+    client: TelegramClient,
+    config: dict,
+    tracker: PhotoTracker,
+    catch_up: bool = False,
+    now: datetime | None = None,
+) -> bool:
     photos_dir = config["photos_dir"]
     sent_dir = config["sent_dir"]
     chat_id = config["chat_id"]
     photos_per_day = config["photos_per_day"]
     schedule = config["schedule"]
 
-    if tracker.get_today_count() >= photos_per_day:
+    if now is None:
+        now = datetime.now()
+
+    today_count = tracker.get_today_count()
+    if today_count >= photos_per_day:
         logger.info("Today's photo quota already sent")
         return True
 
-    pending = tracker.get_pending_photos(photos_dir, photos_per_day)
-    if len(pending) < photos_per_day:
-        logger.warning(f"Not enough photos. Available: {len(pending)}, needed: {photos_per_day}")
+    remaining = photos_per_day - today_count
+    pending = tracker.get_pending_photos(photos_dir, remaining)
+    if len(pending) < remaining:
+        logger.warning(f"Not enough photos. Available: {len(pending)}, needed: {remaining}")
         if not pending:
             logger.info("All photos have been sent. Stopping.")
             return False
 
-    times = generate_random_times(
-        schedule["start_hour"],
-        schedule["start_minute"],
-        schedule["end_hour"],
-        schedule["end_minute"],
-        len(pending),
-    )
+    if catch_up:
+        logger.info(f"Catching up {len(pending)} missed photo(s) for today")
+        times = None
+    else:
+        times = generate_random_times(
+            schedule["start_hour"],
+            schedule["start_minute"],
+            schedule["end_hour"],
+            schedule["end_minute"],
+            len(pending),
+        )
 
-    now = datetime.now()
-    for photo_path, send_time in zip(pending, times):
-        target = datetime.combine(now.date(), send_time)
-        if target < now:
-            logger.warning(f"Scheduled time {send_time} has passed, sending immediately")
-            target = now
+    for index, photo_path in enumerate(pending):
+        if times is None:
+            logger.info(f"Sending missed photo: {Path(photo_path).name}")
+        else:
+            send_time = times[index]
+            target = datetime.combine(now.date(), send_time)
+            if target < now:
+                logger.warning(f"Scheduled time {send_time} has passed, sending immediately")
+                target = now
 
-        delay = (target - now).total_seconds()
-        if delay > 0:
-            logger.info(f"Scheduled: {Path(photo_path).name} at {send_time}")
-            await asyncio.sleep(delay)
+            delay = (target - now).total_seconds()
+            if delay > 0:
+                logger.info(f"Scheduled: {Path(photo_path).name} at {send_time}")
+                await asyncio.sleep(delay)
 
         success = await send_photo(client, chat_id, photo_path, sent_dir)
         if success:
@@ -89,20 +124,29 @@ async def main_loop() -> None:
     try:
         while True:
             now = datetime.now()
-            schedule = config["schedule"]
-            start_time = time(schedule["start_hour"], schedule["start_minute"])
-            end_time = time(schedule["end_hour"], schedule["end_minute"])
-
-            current_time = now.time()
             today_count = tracker.get_today_count()
-            in_window = start_time <= current_time <= end_time
+            state = window_state(now, config["schedule"])
 
             if today_count < config["photos_per_day"]:
-                if in_window:
+                if state == WINDOW_INSIDE:
                     logger.info("Inside sending window")
-                    result = await schedule_today(client, config, tracker)
+                    result = await schedule_today(client, config, tracker, now=now)
                     if result is False:
                         break
+                elif state == WINDOW_AFTER and config["catch_up_missed"]:
+                    logger.info(
+                        "Sending window has already ended; "
+                        "catching up today's missed photos"
+                    )
+                    result = await schedule_today(
+                        client, config, tracker, catch_up=True, now=now
+                    )
+                    if result is False:
+                        break
+                elif state == WINDOW_AFTER:
+                    logger.info(
+                        "Sending window has ended for today, waiting until tomorrow"
+                    )
                 else:
                     logger.info("Outside sending window, waiting")
 

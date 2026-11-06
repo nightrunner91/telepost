@@ -32,6 +32,7 @@ def load_config(path: str | Path = "config.yaml") -> dict:
         "end_minute": schedule.get("end_minute", 0),
     }
     config["photos_per_day"] = config.get("photos_per_day", 3)
+    config["catch_up_missed"] = bool(config.get("catch_up_missed", True))
     config["sent_log"] = config.get("sent_log", "./data/sent_photos.json")
     config["sent_dir"] = config.get("sent_dir", "./photos/sent")
 

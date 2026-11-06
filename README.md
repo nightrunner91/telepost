@@ -42,11 +42,14 @@ Telepost is a minimal, reliable scheduler that sends photos from a local folder 
 
 The scheduler wakes up periodically, checks whether today's quota has already been sent, and if the current time is inside the configured window, it picks the oldest unsent images, randomizes their delivery times, and posts them one by one. Each successfully sent photo is logged and moved to a separate `sent/` folder so the same file is never posted twice.
 
+If the app starts after the sending window has already ended (for example, the computer was off at the scheduled time) and today's quota has not been met yet, it automatically catches up and sends the missed photos immediately. Catch-up only happens on the same day; once midnight passes, the missed day is skipped.
+
 ## Features
 
 - **Userbot-style posting** from your personal Telegram account.
 - **Configurable daily window** and number of photos per day.
 - **Randomized send times** within the window for natural-looking activity.
+- **Missed-run catch-up** on the same day when the app starts after the sending window.
 - **Deduplication** through a persistent JSON log of sent photos.
 - **Automatic file management** that moves sent images to a `sent/` directory.
 - **Docker-ready** deployment with persistent session storage.
@@ -112,7 +115,7 @@ After authentication, start the scheduler with:
 python main.py
 ```
 
-The scheduler checks every 5 minutes whether it is inside the configured posting window and whether today's quota has been met. If both conditions are true, it begins sending photos.
+The scheduler checks every 5 minutes whether it is inside the configured posting window and whether today's quota has been met. If both conditions are true, it begins sending photos. If the app starts after the window has already ended and today's quota is still not met, it sends the missed photos immediately instead of waiting until tomorrow.
 
 ### Running with Docker
 
@@ -151,6 +154,7 @@ schedule:
   end_hour: 8
   end_minute: 20
 photos_per_day: 3
+catch_up_missed: true
 ```
 
 | Field | Description | Default |
@@ -167,6 +171,7 @@ photos_per_day: 3
 | `schedule.end_hour` | Window end hour | `8` |
 | `schedule.end_minute` | Window end minute | `0` |
 | `photos_per_day` | Maximum photos to send per day | `3` |
+| `catch_up_missed` | Send today's missed photos immediately when the app starts after the window has ended | `true` |
 
 > [!IMPORTANT]
 > Keep `config.yaml`, `.env`, and the `data/` directory out of version control. They are already ignored in `.gitignore`.
@@ -204,7 +209,7 @@ Starts a Telethon session and authenticates with Telegram. If `code` is not prov
 
 ### `main.main_loop()`
 
-Entry point for the scheduler. Connects to Telegram, checks authorization, and runs the infinite scheduling loop.
+Entry point for the scheduler. Connects to Telegram, checks authorization, and runs the infinite scheduling loop. If the loop starts after the sending window has ended and today's quota is not met, it sends the missed photos immediately (controlled by `catch_up_missed`).
 
 ## Development
 
@@ -233,6 +238,7 @@ telepost/
 │   └── sent/            # sent images are moved here
 ├── data/                # runtime data (session, log)
 └── tests/               # pytest test suite
+    ├── test_main.py
     ├── test_sender.py
     └── test_tracker.py
 ```

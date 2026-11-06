@@ -11,3 +11,4 @@ schedule:
   end_hour: 8
   end_minute: 20
 photos_per_day: 3
+catch_up_missed: true
