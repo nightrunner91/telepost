@@ -2,9 +2,16 @@ services:
   telepost:
     build: .
     container_name: telepost
-    restart: on-failure
+    restart: unless-stopped
+    # Run as the host user so files moved into photos/sent keep your ownership.
+    user: "1000:1000"
     environment:
       - TZ=Europe/Chisinau
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     volumes:
       - ./photos:/app/photos
       - ./config.yaml:/app/config.yaml
